@@ -1,0 +1,5 @@
+*.o
+.vs/
+.vscode/
+.elf
+serial.dump
