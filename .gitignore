@@ -1,5 +1,5 @@
 *.o
 .vs/
 .vscode/
-.elf
+*.elf
 serial.dump
