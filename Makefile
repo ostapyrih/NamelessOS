@@ -16,9 +16,9 @@ kernel.elf: $(OBJECTS)
 	ld $(LDFLAGS) $(OBJECTS) -o kernel.elf
 
 os.iso: kernel.elf
-	#rm tutos.iso
+	#rm namelessos.iso
 	cp kernel.elf iso/boot/kernel.elf
-	grub-mkrescue -o tutos.iso iso
+	grub-mkrescue -o namelessos.iso iso
 
 run: os.iso
 	bochs -f bochsrc.txt -q
