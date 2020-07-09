@@ -1,37 +1,40 @@
-global loader
-MBALIGN equ 1 << 0
-MEMINFO equ 1 << 1
-FLAGS equ MBALIGN | MEMINFO
-MAGIC equ 0x1BADB002
-CHECKSUM equ -(MAGIC + FLAGS)
+MBOOT_PAGE_ALIGN    equ 1<<0    ; Load kernel and modules on a page boundary
+MBOOT_MEM_INFO      equ 1<<1    ; Provide your kernel with memory info
+MBOOT_HEADER_MAGIC  equ 0x1BADB002 ; Multiboot Magic value
+; NOTE: We do not use MBOOT_AOUT_KLUDGE. It means that GRUB does not
+; pass us a symbol table.
+MBOOT_HEADER_FLAGS  equ MBOOT_PAGE_ALIGN | MBOOT_MEM_INFO
+MBOOT_CHECKSUM      equ -(MBOOT_HEADER_MAGIC + MBOOT_HEADER_FLAGS)
 
-section .multiboot
-align 4
-    dd MAGIC
-    dd FLAGS
-    dd CHECKSUM
 
-section .bss
-    align 16
-    stack_bottom:
-    resb 16384
-    stack_top:
+[BITS 32]                       ; All instructions should be 32-bit.
 
-section .text
-loader:
-    mov esp, stack_top
-    
-    extern kernel_virtual_start
-    extern kernel_virtual_end
-    extern kernel_physical_start
-    extern kernel_physical_end
+[GLOBAL mboot]                  ; Make 'mboot' accessible from C.
+[EXTERN code]                   ; Start of the '.text' section.
+[EXTERN bss]                    ; Start of the .bss section.
+[EXTERN end]                    ; End of the last loadable section.
 
-    push kernel_physical_end
-    push kernel_physical_start
-    push kernel_virtual_end
-    push kernel_virtual_start
-    extern main
-    call main
+mboot:
+  dd  MBOOT_HEADER_MAGIC        ; GRUB will search for this value on each
+                                ; 4-byte boundary in your kernel file
+  dd  MBOOT_HEADER_FLAGS        ; How GRUB should load your file / settings
+  dd  MBOOT_CHECKSUM            ; To ensure that the above values are correct
+   
+  dd  mboot                     ; Location of this descriptor
+  dd  code                      ; Start of kernel '.text' (code) section.
+  dd  bss                       ; End of kernel '.data' section.
+  dd  end                       ; End of kernel.
+  dd  start                     ; Kernel entry point (initial EIP).
 
-.hang:
-    jmp .hang
+[GLOBAL start]                  ; Kernel entry point.
+[EXTERN main]                   ; This is the entry point of our C code
+
+start:
+  push    ebx                   ; Load multiboot header location
+
+  ; Execute the kernel:
+  cli                         ; Disable interrupts.
+  call main                   ; call our main() function.
+  jmp $                       ; Enter an infinite loop, to stop the processor
+                              ; executing whatever rubbish is in the memory
+                              ; after our kernel!
