@@ -1,6 +1,4 @@
 *.o
-.vs/
-.vscode/
-*.elf
 *.iso
-serial.dump
+*.elf
+.vscode/
